@@ -25,6 +25,9 @@ contract Auction is Context{
     //Stores an instance of the ERC721 minter interfacfe
     IERC721 private minter;
 
+    //Stroes the address of the secondary minter
+    IERC721 private minter2;
+
     //Stores an instance of a WETH interface
     IWETH private weth;
 
@@ -45,6 +48,7 @@ contract Auction is Context{
 
     constructor(
         address _minter,
+        address _minter2,
         address _weth
     ){
         //Stores the deployer as the admin
@@ -53,8 +57,11 @@ contract Auction is Context{
         //Builds an instance of the WETH interface
         weth = IWETH(_weth);
 
-        //Builds an instance of the ERC721 interface
+        //Builds an instance of the ERC721 interface 
         minter = IERC721(_minter);
+
+        //Builds an instance of the ERC721 interface
+        minter2 = IERC721(_minter2);
     }
 
     //This function can only be called by the admin of this contract
@@ -89,6 +96,13 @@ contract Auction is Context{
         
         //Get the address of the caller
         address caller = _msgSender();
+
+        require(
+            minter.balanceOf(caller) > 0 
+            ||
+            minter2.balanceOf(caller) > 0,
+            "ERR:NH"
+        );//NH => Not Holder
 
         //Pull struct into the function to avoid excessive SLoad functions
         SaleDetails storage details = saleDetails[saleID];

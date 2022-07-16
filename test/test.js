@@ -30,6 +30,7 @@ describe("Auction", function() {
 
         const nft = await ethers.getContractFactory("NFT", deployer)
         const NFT = await nft.deploy()
+        const NFT2 = await nft.deploy()
 
         const weth = await ethers.getContractFactory("WETH", deployer)
         const WETH = await weth.deploy()
@@ -37,6 +38,7 @@ describe("Auction", function() {
         const auction = await ethers.getContractFactory("Auction", deployer)
         const AUCTION = await auction.deploy(
             NFT.address,
+            NFT2.address,
             WETH.address
         )
 
@@ -56,12 +58,12 @@ describe("Auction", function() {
 
         await WETH.connect(addr2).approve(AUCTION.address, depositedAmount)
 
-        return { ONE_DAY, AUCTION, WETH, NFT, deployer, addr1, addr2, depositedAmount }
+        return { ONE_DAY, AUCTION, WETH, NFT, NFT2, deployer, addr1, addr2, depositedAmount }
     }
 
     describe("Testing", function() {
         it("Should allow the deployer to list an NFT", async function() {
-            const { ONE_DAY, AUCTION, WETH, NFT, deployer, addr1, addr2, depositedAmount } = await loadFixture(setup)
+            const { ONE_DAY, AUCTION, WETH, NFT, NFT2, deployer, addr1, addr2, depositedAmount } = await loadFixture(setup)
 
             await NFT.connect(deployer).approve(AUCTION.address, 1)
 
@@ -71,7 +73,7 @@ describe("Auction", function() {
         })
 
         it("Should not allow anyone other than the deployer to list an NFT", async() => {
-            const { ONE_DAY, AUCTION, WETH, NFT, deployer, addr1, addr2, depositedAmount } = await loadFixture(setup)
+            const { ONE_DAY, AUCTION, WETH, NFT, NFT2, deployer, addr1, addr2, depositedAmount } = await loadFixture(setup)
 
             await NFT.connect(deployer).transferFrom(deployer.address, addr1.address, 1)
 
@@ -80,22 +82,49 @@ describe("Auction", function() {
             expect(AUCTION.listItem(1, ONE_DAY)).to.be.revertedWith("ERR:NA")
         })
 
-        it("Should allow a user to place a bid", async() => {
-            const { ONE_DAY, AUCTION, WETH, NFT, deployer, addr1, addr2, depositedAmount } = await loadFixture(setup)
+        it("Should not allow a user to place a bid if they don't own a NFT from either collection", async() => {
+            const { ONE_DAY, AUCTION, WETH, NFT, NFT2, deployer, addr1, addr2, depositedAmount } = await loadFixture(setup)
 
             await NFT.connect(deployer).approve(AUCTION.address, 1)
 
             await AUCTION.connect(deployer).listItem(1, ONE_DAY)
+
+            expect(AUCTION.connect(addr1).bidOnItem(0, depositedAmount)).to.be.revertedWith("ERR:NH")
+        })
+
+        it("Should allow a user to place a bid if they own a NFT from collection 1", async() => {
+            const { ONE_DAY, AUCTION, WETH, NFT, NFT2, deployer, addr1, addr2, depositedAmount } = await loadFixture(setup)
+
+            await NFT.connect(deployer).approve(AUCTION.address, 1)
+
+            await AUCTION.connect(deployer).listItem(1, ONE_DAY)
+
+            await NFT.connect(deployer).transferFrom(deployer.address, addr1.address, 2)
+
+            expect(await AUCTION.connect(addr1).bidOnItem(0, depositedAmount))
+        })
+
+        it("Should allow a user to place a bid if they own a NFT from collection 2", async() => {
+            const { ONE_DAY, AUCTION, WETH, NFT, NFT2, deployer, addr1, addr2, depositedAmount } = await loadFixture(setup)
+
+            await NFT.connect(deployer).approve(AUCTION.address, 1)
+
+            await AUCTION.connect(deployer).listItem(1, ONE_DAY)
+
+            await NFT2.connect(deployer).transferFrom(deployer.address, addr1.address, 1)
 
             expect(await AUCTION.connect(addr1).bidOnItem(0, depositedAmount))
         })
 
         it("Should not allow a user to place a bid lower than a previous bid", async() => {
-            const { ONE_DAY, AUCTION, WETH, NFT, deployer, addr1, addr2, depositedAmount } = await loadFixture(setup)
+            const { ONE_DAY, AUCTION, WETH, NFT, NFT2, deployer, addr1, addr2, depositedAmount } = await loadFixture(setup)
 
             await NFT.connect(deployer).approve(AUCTION.address, 1)
 
             await AUCTION.connect(deployer).listItem(1, ONE_DAY)
+
+            await NFT2.connect(deployer).transferFrom(deployer.address, addr1.address, 1)
+            await NFT2.connect(deployer).transferFrom(deployer.address, addr2.address, 2)
 
             await AUCTION.connect(addr1).bidOnItem(0, depositedAmount)
 
@@ -103,11 +132,14 @@ describe("Auction", function() {
         })
 
         it("Should refund the user their weth if they are outbid", async() => {
-            const { ONE_DAY, AUCTION, WETH, NFT, deployer, addr1, addr2, depositedAmount } = await loadFixture(setup)
+            const { ONE_DAY, AUCTION, WETH, NFT, NFT2, deployer, addr1, addr2, depositedAmount } = await loadFixture(setup)
 
             await NFT.connect(deployer).approve(AUCTION.address, 1)
 
             await AUCTION.connect(deployer).listItem(1, ONE_DAY)
+
+            await NFT2.connect(deployer).transferFrom(deployer.address, addr1.address, 1)
+            await NFT2.connect(deployer).transferFrom(deployer.address, addr2.address, 2)
 
             await AUCTION.connect(addr1).bidOnItem(0, ethers.utils.parseEther("10"))
 
@@ -117,11 +149,14 @@ describe("Auction", function() {
         })
 
         it("Should allow a user to claim the NFT if they won the auction", async() => {
-            const { ONE_DAY, AUCTION, WETH, NFT, deployer, addr1, addr2, depositedAmount } = await loadFixture(setup)
+            const { ONE_DAY, AUCTION, WETH, NFT, NFT2, deployer, addr1, addr2, depositedAmount } = await loadFixture(setup)
 
             await NFT.connect(deployer).approve(AUCTION.address, 1)
 
             await AUCTION.connect(deployer).listItem(1, ONE_DAY)
+
+            await NFT2.connect(deployer).transferFrom(deployer.address, addr1.address, 1)
+            await NFT2.connect(deployer).transferFrom(deployer.address, addr2.address, 2)
 
             await AUCTION.connect(addr1).bidOnItem(0, ethers.utils.parseEther("10"))
 
@@ -133,11 +168,14 @@ describe("Auction", function() {
         })
 
         it("Should not allow a user who didn't win to claim a NFT", async() => {
-            const { ONE_DAY, AUCTION, WETH, NFT, deployer, addr1, addr2, depositedAmount } = await loadFixture(setup)
+            const { ONE_DAY, AUCTION, WETH, NFT, NFT2, deployer, addr1, addr2, depositedAmount } = await loadFixture(setup)
 
             await NFT.connect(deployer).approve(AUCTION.address, 1)
 
             await AUCTION.connect(deployer).listItem(1, ONE_DAY)
+
+            await NFT2.connect(deployer).transferFrom(deployer.address, addr1.address, 1)
+            await NFT2.connect(deployer).transferFrom(deployer.address, addr2.address, 2)
 
             await AUCTION.connect(addr1).bidOnItem(0, ethers.utils.parseEther("10"))
 
