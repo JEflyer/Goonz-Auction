@@ -15,7 +15,7 @@ import "@openzeppelin/contracts/utils/Context.sol";
 contract Auction is Context{
 
     //List of events
-    event NewListing(uint256 saleID, uint16 tokenId, address lister);
+    event NewListing(uint256 saleID, uint16 tokenId, address minter, address lister);
     event NewBid(uint256 saleID, uint256 amount, address bidder);
     event Winner(uint256 saleID, address winner);
 
@@ -34,6 +34,7 @@ contract Auction is Context{
     //Define a struct containing all the necesary details for a sale   
     struct SaleDetails {
         address highestBidder;
+        address minter;
         uint256 highestBid;
         uint64 bidUntil;
         uint16 tokenId;
@@ -65,7 +66,7 @@ contract Auction is Context{
     }
 
     //This function can only be called by the admin of this contract
-    function listItem(uint16 tokenId, uint64 time) external {
+    function listItem(address _minter, uint16 tokenId, uint64 time) external {
 
         //Get the address of the caller
         address caller = _msgSender();
@@ -73,11 +74,13 @@ contract Auction is Context{
         //Check that the caller is the admin of this contract
         require(caller == admin, "ERR:NA");//NA => Not Admin
 
+        IERC721 tempMinter = IERC721(_minter);
+
         //Check that this contract is approved to move this token
-        require(minter.getApproved(tokenId) == address(this), "ERR:GA");//GA => Getting Approved
+        require(tempMinter.getApproved(tokenId) == address(this), "ERR:GA");//GA => Getting Approved
 
         //Transfer the token from the caller to this contract
-        minter.transferFrom(caller,address(this),tokenId);
+        tempMinter.transferFrom(caller,address(this),tokenId);
         
         //Build new sale details
         saleDetails[saleId++] = SaleDetails({
@@ -85,10 +88,13 @@ contract Auction is Context{
             tokenId: tokenId,
             highestBidder: caller,
             bidUntil: uint64(block.timestamp) + time,
-            active: true
+            active: true,
+            minter: _minter
         });
 
         //Emit event
+        emit NewListing(saleId,tokenId, _minter, caller);
+    
     }
 
     //Anyone can call this function
@@ -133,6 +139,7 @@ contract Auction is Context{
         details.highestBid = amount;
 
         //Emit event
+        emit NewBid(saleID, amount, caller);
     }
 
     //This function can only be called by the winner of the auction
@@ -154,12 +161,15 @@ contract Auction is Context{
         require(caller == details.highestBidder, "ERR:HB");//HB => Highest Bidder
 
         //Transfer the NFT from this contract to the caller
-        minter.transferFrom(address(this), caller, details.tokenId);
+        IERC721(details.minter).transferFrom(address(this), caller, details.tokenId);
 
         //Transfer the highest bid to the admin
         weth.transferFrom(address(this), admin, details.highestBid);
 
         //Delete the active bool setting it to false & refunding gas
         delete details.active;
+
+        //Emit event
+        emit Winner(saleID, caller);
     }
 }

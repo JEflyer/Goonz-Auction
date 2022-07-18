@@ -67,9 +67,19 @@ describe("Auction", function() {
 
             await NFT.connect(deployer).approve(AUCTION.address, 1)
 
-            expect(await AUCTION.connect(deployer).listItem(1, ONE_DAY))
+            expect(await AUCTION.connect(deployer).listItem(NFT.address, 1, ONE_DAY))
 
             expect(await NFT.ownerOf(1)).to.be.equal(AUCTION.address)
+        })
+
+        it("Should allow the deployer to list an NFT from collection 2", async function() {
+            const { ONE_DAY, AUCTION, WETH, NFT, NFT2, deployer, addr1, addr2, depositedAmount } = await loadFixture(setup)
+
+            await NFT2.connect(deployer).approve(AUCTION.address, 1)
+
+            expect(await AUCTION.connect(deployer).listItem(NFT2.address, 1, ONE_DAY))
+
+            expect(await NFT2.ownerOf(1)).to.be.equal(AUCTION.address)
         })
 
         it("Should not allow anyone other than the deployer to list an NFT", async() => {
@@ -79,7 +89,7 @@ describe("Auction", function() {
 
             await NFT.connect(addr1).approve(AUCTION.address, 1)
 
-            expect(AUCTION.listItem(1, ONE_DAY)).to.be.revertedWith("ERR:NA")
+            expect(AUCTION.listItem(NFT.address, 1, ONE_DAY)).to.be.revertedWith("ERR:NA")
         })
 
         it("Should not allow a user to place a bid if they don't own a NFT from either collection", async() => {
@@ -87,7 +97,7 @@ describe("Auction", function() {
 
             await NFT.connect(deployer).approve(AUCTION.address, 1)
 
-            await AUCTION.connect(deployer).listItem(1, ONE_DAY)
+            await AUCTION.connect(deployer).listItem(NFT.address, 1, ONE_DAY)
 
             expect(AUCTION.connect(addr1).bidOnItem(0, depositedAmount)).to.be.revertedWith("ERR:NH")
         })
@@ -97,7 +107,7 @@ describe("Auction", function() {
 
             await NFT.connect(deployer).approve(AUCTION.address, 1)
 
-            await AUCTION.connect(deployer).listItem(1, ONE_DAY)
+            await AUCTION.connect(deployer).listItem(NFT.address, 1, ONE_DAY)
 
             await NFT.connect(deployer).transferFrom(deployer.address, addr1.address, 2)
 
@@ -109,7 +119,7 @@ describe("Auction", function() {
 
             await NFT.connect(deployer).approve(AUCTION.address, 1)
 
-            await AUCTION.connect(deployer).listItem(1, ONE_DAY)
+            await AUCTION.connect(deployer).listItem(NFT.address, 1, ONE_DAY)
 
             await NFT2.connect(deployer).transferFrom(deployer.address, addr1.address, 1)
 
@@ -121,7 +131,7 @@ describe("Auction", function() {
 
             await NFT.connect(deployer).approve(AUCTION.address, 1)
 
-            await AUCTION.connect(deployer).listItem(1, ONE_DAY)
+            await AUCTION.connect(deployer).listItem(NFT.address, 1, ONE_DAY)
 
             await NFT2.connect(deployer).transferFrom(deployer.address, addr1.address, 1)
             await NFT2.connect(deployer).transferFrom(deployer.address, addr2.address, 2)
@@ -136,7 +146,7 @@ describe("Auction", function() {
 
             await NFT.connect(deployer).approve(AUCTION.address, 1)
 
-            await AUCTION.connect(deployer).listItem(1, ONE_DAY)
+            await AUCTION.connect(deployer).listItem(NFT.address, 1, ONE_DAY)
 
             await NFT2.connect(deployer).transferFrom(deployer.address, addr1.address, 1)
             await NFT2.connect(deployer).transferFrom(deployer.address, addr2.address, 2)
@@ -153,7 +163,7 @@ describe("Auction", function() {
 
             await NFT.connect(deployer).approve(AUCTION.address, 1)
 
-            await AUCTION.connect(deployer).listItem(1, ONE_DAY)
+            await AUCTION.connect(deployer).listItem(NFT.address, 1, ONE_DAY)
 
             await NFT2.connect(deployer).transferFrom(deployer.address, addr1.address, 1)
             await NFT2.connect(deployer).transferFrom(deployer.address, addr2.address, 2)
@@ -172,7 +182,7 @@ describe("Auction", function() {
 
             await NFT.connect(deployer).approve(AUCTION.address, 1)
 
-            await AUCTION.connect(deployer).listItem(1, ONE_DAY)
+            await AUCTION.connect(deployer).listItem(NFT.address, 1, ONE_DAY)
 
             await NFT2.connect(deployer).transferFrom(deployer.address, addr1.address, 1)
             await NFT2.connect(deployer).transferFrom(deployer.address, addr2.address, 2)
