@@ -22,11 +22,13 @@ contract Auction is Context{
     //Stores the address of the admin of this contract
     address private admin;
 
-    //Stores an instance of the ERC721 minter interfacfe
-    IERC721 private minter;
+    // //Stores an instance of the ERC721 minter interfacfe
+    // IERC721 private minter;
 
-    //Stroes the address of the secondary minter
-    IERC721 private minter2;
+    // //Stroes the address of the secondary minter
+    // IERC721 private minter2;
+
+    IERC721[] private minters;
 
     //Stores an instance of a WETH interface
     IWETH private weth;
@@ -59,20 +61,46 @@ contract Auction is Context{
         weth = IWETH(_weth);
 
         //Builds an instance of the ERC721 interface 
-        minter = IERC721(_minter);
-
+        minters.push(IERC721(_minter));
+        
         //Builds an instance of the ERC721 interface
-        minter2 = IERC721(_minter2);
+        minters.push(IERC721(_minter2));
+    }
+
+    modifier onlyAdmin {
+        require(_msgSender() == admin,"ERR:NA");//NA => Not Admin
+        _;
+    }
+
+    function updateAdmin(address _new) external onlyAdmin {
+        admin = _new;
+    }
+
+    function addNewMinterToHolderCheck(address _new) external onlyAdmin {
+        minters.push(IERC721(_new));
+    }
+
+    function removeMinterFromHolderCheck(address _remove) external onlyAdmin {
+        for(uint8 i = 0; i < minters.length; ){
+
+            if(address(minters[i]) == _remove){
+                minters[i] = minters[minters.length-1];
+                delete minters[minters.length-1];
+                minters.pop();
+                break;
+            }
+
+            unchecked{
+                i++;
+            }
+        }
     }
 
     //This function can only be called by the admin of this contract
-    function listItem(address _minter, uint16 tokenId, uint64 time) external {
+    function listItem(address _minter, uint16 tokenId, uint64 time) external onlyAdmin {
 
         //Get the address of the caller
         address caller = _msgSender();
-
-        //Check that the caller is the admin of this contract
-        require(caller == admin, "ERR:NA");//NA => Not Admin
 
         IERC721 tempMinter = IERC721(_minter);
 
@@ -97,6 +125,20 @@ contract Auction is Context{
     
     }
 
+    function checkIfHolder(address caller) internal view returns(bool) {
+        for(uint8 i = 0 ; i < minters.length;){
+
+            if(minters[i].balanceOf(caller) > 0){
+                return true;
+            }
+
+            unchecked{
+                i++;
+            }
+        }
+        return false;
+    } 
+
     //Anyone can call this function
     function bidOnItem(uint256 saleID, uint256 amount) external {
         
@@ -104,9 +146,7 @@ contract Auction is Context{
         address caller = _msgSender();
 
         require(
-            minter.balanceOf(caller) > 0 
-            ||
-            minter2.balanceOf(caller) > 0,
+            checkIfHolder(caller),
             "ERR:NH"
         );//NH => Not Holder
 

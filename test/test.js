@@ -193,5 +193,41 @@ describe("Auction", function() {
 
             expect(AUCTION.connect(addr2).claimNFT(0)).to.be.revertedWith("ERR:HB")
         })
+
+        it("Should allow the admin to change the admin", async() => {
+            const { ONE_DAY, AUCTION, WETH, NFT, NFT2, deployer, addr1, addr2, depositedAmount } = await loadFixture(setup)
+
+            expect(await AUCTION.connect(deployer).updateAdmin(addr1.address))
+        })
+
+        it("Should not allow a wallet other than the admin to change the admin", async() => {
+            const { ONE_DAY, AUCTION, WETH, NFT, NFT2, deployer, addr1, addr2, depositedAmount } = await loadFixture(setup)
+
+            expect(AUCTION.connect(addr1).updateAdmin(addr1.address)).to.be.revertedWith("ERR:NA");
+        })
+
+        it("Should allow the admin to add a new minter", async() => {
+            const { ONE_DAY, AUCTION, WETH, NFT, NFT2, deployer, addr1, addr2, depositedAmount } = await loadFixture(setup)
+
+            expect(await AUCTION.connect(deployer).addNewMinterToHolderCheck(addr2.address))
+        })
+
+        it("Should allow the admin to remove a minter", async() => {
+            const { ONE_DAY, AUCTION, WETH, NFT, NFT2, deployer, addr1, addr2, depositedAmount } = await loadFixture(setup)
+
+            expect(await AUCTION.connect(deployer).removeMinterFromHolderCheck(NFT.address))
+        })
+
+        it("Should not allow anyone other than the admin to add a new minter", async() => {
+            const { ONE_DAY, AUCTION, WETH, NFT, NFT2, deployer, addr1, addr2, depositedAmount } = await loadFixture(setup)
+
+            expect(AUCTION.connect(addr1).addNewMinterToHolderCheck(addr2.address)).to.be.revertedWith("ERR:NA")
+        })
+
+        it("Should not allow anyone other than the admin to remove a new minter", async() => {
+            const { ONE_DAY, AUCTION, WETH, NFT, NFT2, deployer, addr1, addr2, depositedAmount } = await loadFixture(setup)
+
+            expect(AUCTION.connect(addr1).removeMinterFromHolderCheck(NFT.address)).to.be.revertedWith("ERR:NA")
+        })
     })
 })
