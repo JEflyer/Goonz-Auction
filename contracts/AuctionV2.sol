@@ -226,4 +226,9 @@ contract AuctionV2 is Context{
 
         return details.highestBid + details.bidStep;
     }
+
+    function getDetails(uint256 saleID) external view returns(SaleDetails memory){
+        require(saleID <= saleId, "ERR:SI");//SI => SaleId
+        return saleDetails[saleID];
+    }
 }
